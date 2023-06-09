@@ -11,6 +11,12 @@ pub struct GGA {
     pub source: Source,
     /// Time of fix in UTC.
     pub time: Time,
+    /// Fix info
+    pub fix: Option<GGAFix>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct GGAFix {
     /// Latitude in reference datum, typically WGS-84.
     pub latitude: Latitude,
     /// Logitude in reference datum, typically WGS-84.
@@ -49,36 +55,33 @@ impl GGA {
         let age_dgps = common::parse_f32(fields.next())?
             .and_then(|a| Some(Duration::from_millis((a * 1000f32) as u64)));
         let dgps_station_id = common::parse_u16(fields.next())?;
-        if let (
-            Some(time),
-            Some(latitude),
-            Some(longitude),
-            Some(gps_quality),
-            Some(sat_in_use),
-            Some(hdop),
-            Some(altitude),
-        ) = (
-            time,
-            latitude,
-            longitude,
-            gps_quality,
-            sat_in_use,
-            hdop,
-            altitude,
-        ) {
-            Ok(Some(GGA {
-                source,
-                time,
-                latitude,
-                longitude,
-                gps_quality,
-                sat_in_use,
-                hdop,
-                altitude,
-                geoidal_separation,
-                age_dgps,
-                dgps_station_id,
-            }))
+
+        if let Some(time) = time {
+            let fix = if let (
+                Some(latitude),
+                Some(longitude),
+                Some(gps_quality),
+                Some(sat_in_use),
+                Some(hdop),
+                Some(altitude),
+            ) = (latitude, longitude, gps_quality, sat_in_use, hdop, altitude)
+            {
+                Some(GGAFix {
+                    latitude,
+                    longitude,
+                    gps_quality,
+                    sat_in_use,
+                    hdop,
+                    altitude,
+                    geoidal_separation,
+                    age_dgps,
+                    dgps_station_id,
+                })
+            } else {
+                None
+            };
+
+            Ok(Some(GGA { source, time, fix }))
         } else {
             Ok(None)
         }
